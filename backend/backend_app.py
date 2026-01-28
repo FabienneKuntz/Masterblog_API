@@ -1,4 +1,6 @@
-from flask import Flask, jsonify
+from idlelib.macosx import hideTkConsole
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -12,7 +14,46 @@ POSTS = [
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
+    if len(POSTS) == 0:
+        return jsonify({
+            "success": False,
+            "message": "No posts yet"
+        })
+
     return jsonify(POSTS)
+
+
+@app.route('/api/posts', methods=['POST'])
+def add_posts():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Request body must be JSON"}), 400
+
+    missing_fields = []
+
+    if "title" not in data:
+        missing_fields.append("title")
+    if "content" not in data:
+        missing_fields.append("content")
+
+    if missing_fields:
+        return jsonify({
+            "error": "Missing required fields",
+            "missing": missing_fields
+        }), 400
+
+    new_id = max(post["id"] for post in POSTS) + 1 if POSTS else 1
+
+    new_post = {
+        "id": new_id,
+        "title": data["title"],
+        "content": data["content"]
+    }
+
+    POSTS.append(new_post)
+
+    return jsonify(new_post), 201
 
 
 if __name__ == '__main__':
